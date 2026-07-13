@@ -1,0 +1,11 @@
+.git
+.m2repo
+.mvn
+.github
+**/target
+*.cmd
+*.ps1
+*.md
+.gitignore
+LICENSE
+uploads

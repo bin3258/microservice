@@ -1,0 +1,320 @@
+name: shop-microservices
+
+services:
+  # ============ INFRASTRUCTURE ============
+  mariadb:
+    image: mariadb:10.11
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./docker-init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - shop-network
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - shop-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - shop-network
+
+  elasticsearch:
+    image: elasticsearch:8.12.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - shop-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - shop-network
+
+  # ============ DB ADMIN TOOL ============
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    ports:
+      - "8082:8080"
+    depends_on:
+      - mariadb
+    networks:
+      - shop-network
+
+  # ============ SERVICE DISCOVERY ============
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    image: shop-microservices/eureka-server:latest
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - shop-network
+
+  # ============ API GATEWAY ============
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: shop-microservices/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+    networks:
+      - shop-network
+
+  # ============ MONGODB SERVICES ============
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    image: shop-microservices/product-service:latest
+    container_name: product-service
+    expose:
+      - "8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    volumes:
+      - product-uploads:/app/uploads
+    depends_on:
+      - mongodb
+      - eureka-server
+      - rabbitmq
+    networks:
+      - shop-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    image: shop-microservices/user-service:latest
+    container_name: user-service
+    expose:
+      - "8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - mongodb
+      - eureka-server
+      - rabbitmq
+    networks:
+      - shop-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    image: shop-microservices/order-service:latest
+    container_name: order-service
+    expose:
+      - "8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - mongodb
+      - eureka-server
+      - product-service
+      - rabbitmq
+    networks:
+      - shop-network
+
+  # ============ MARIADB SERVICES ============
+  category-service:
+    build:
+      context: .
+      dockerfile: category-service/Dockerfile
+    image: shop-microservices/category-service:latest
+    container_name: category-service
+    expose:
+      - "8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+  post-service:
+    build:
+      context: .
+      dockerfile: post-service/Dockerfile
+    image: shop-microservices/post-service:latest
+    container_name: post-service
+    expose:
+      - "8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    volumes:
+      - post-uploads:/app/uploads
+    depends_on:
+      - mariadb
+      - eureka-server
+      - rabbitmq
+    networks:
+      - shop-network
+
+  Auth-service:
+    build:
+      context: .
+      dockerfile: Auth-service/Dockerfile
+    image: shop-microservices/auth-service:latest
+    container_name: Auth-service
+    expose:
+      - "8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - redis
+      - eureka-server
+    networks:
+      - shop-network
+
+  Cart-service:
+    build:
+      context: .
+      dockerfile: Cart-service/Dockerfile
+    image: shop-microservices/cart-service:latest
+    container_name: Cart-service
+    expose:
+      - "8087"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+  Search-service:
+    build:
+      context: .
+      dockerfile: Search-service/Dockerfile
+    image: shop-microservices/search-service:latest
+    container_name: Search-service
+    expose:
+      - "8088"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - elasticsearch
+      - eureka-server
+      - rabbitmq
+    networks:
+      - shop-network
+
+  Inventory-service:
+    build:
+      context: .
+      dockerfile: Inventory-service/Dockerfile
+    image: shop-microservices/inventory-service:latest
+    container_name: Inventory-service
+    expose:
+      - "8089"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+  Payment-service:
+    build:
+      context: .
+      dockerfile: Payment-service/Dockerfile
+    image: shop-microservices/payment-service:latest
+    container_name: Payment-service
+    expose:
+      - "8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+      - rabbitmq
+    networks:
+      - shop-network
+
+  Customer-service:
+    build:
+      context: .
+      dockerfile: Customer-service/Dockerfile
+    image: shop-microservices/customer-service:latest
+    container_name: Customer-service
+    expose:
+      - "8091"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+  Address-service:
+    build:
+      context: .
+      dockerfile: Address-service/Dockerfile
+    image: shop-microservices/address-service:latest
+    container_name: Address-service
+    expose:
+      - "8092"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+networks:
+  shop-network:
+    driver: bridge
+
+volumes:
+  mariadb-data:
+  mongodb-data:
+  redis-data:
+  elasticsearch-data:
+  rabbitmq-data:
+  product-uploads:
+  post-uploads:

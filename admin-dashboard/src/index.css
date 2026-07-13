@@ -1,0 +1,8 @@
+/* Admin Dashboard - minimal global reset */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 125%;
+}
