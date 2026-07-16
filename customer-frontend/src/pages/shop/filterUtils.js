@@ -6,14 +6,26 @@ export function parseRam(ram) {
 
 export function parseStorage(storage) {
   if (!storage) return null;
-  const match = storage.match(/(\d+)\s*GB/i);
-  return match ? parseInt(match[1]) : null;
+  const gbMatch = storage.match(/(\d+)\s*GB/i);
+  if (gbMatch) return parseInt(gbMatch[1]);
+  const tbMatch = storage.match(/(\d+)\s*TB/i);
+  if (tbMatch) return parseInt(tbMatch[1]) * 1024;
+  return null;
 }
 
 export function parseBattery(battery) {
   if (!battery) return null;
-  const match = battery.match(/(\d+)/);
-  return match ? parseInt(match[1]) : null;
+  const mAhMatch = battery.match(/([\d.]+)\s*mAh/i);
+  if (mAhMatch) return parseFloat(mAhMatch[1]);
+
+  const whMatch = battery.match(/([\d.]+)\s*Wh/i);
+  if (whMatch) {
+    const wh = parseFloat(whMatch[1]);
+    return Math.round(wh * 270);
+  }
+
+  const numMatch = battery.match(/([\d.]+)/);
+  return numMatch ? parseFloat(numMatch[1]) : null;
 }
 
 export function categorizeScreen(resolution) {
@@ -53,12 +65,15 @@ export const STORAGE_OPTIONS = [
   { label: '128GB', value: '128', match: (v) => v === 128 },
   { label: '256GB', value: '256', match: (v) => v === 256 },
   { label: '512GB+', value: '512plus', match: (v) => v !== null && v >= 512 },
+  { label: '1TB', value: '1024', match: (v) => v === 1024 },
+  { label: '2TB', value: '2048', match: (v) => v === 2048 },
 ];
 
 export const BATTERY_OPTIONS = [
   { label: 'Dưới 4000 mAh', value: 'lt4000', match: (v) => v !== null && v < 4000 },
   { label: '4000 - 5000 mAh', value: '4000-5000', match: (v) => v !== null && v >= 4000 && v <= 5000 },
-  { label: 'Trên 5000 mAh', value: 'gt5000', match: (v) => v !== null && v > 5000 },
+  { label: '5000 - 10000 mAh', value: '5000-10000', match: (v) => v !== null && v > 5000 && v <= 10000 },
+  { label: 'Trên 10000 mAh', value: 'gt10000', match: (v) => v !== null && v > 10000 },
 ];
 
 export const SCREEN_OPTIONS = [
@@ -67,4 +82,16 @@ export const SCREEN_OPTIONS = [
   { label: '1.5K', value: '1.5K' },
   { label: '2K+', value: '2K+' },
   { label: '4K', value: '4K' },
+];
+
+export const COLOR_OPTIONS = [
+  { label: 'Đen', value: 'Đen' },
+  { label: 'Trắng', value: 'Trắng' },
+  { label: 'Xanh', value: 'Xanh' },
+  { label: 'Đỏ', value: 'Đỏ' },
+  { label: 'Vàng', value: 'Vàng' },
+  { label: 'Bạc', value: 'Bạc' },
+  { label: 'Hồng', value: 'Hồng' },
+  { label: 'Tím', value: 'Tím' },
+  { label: 'Xám', value: 'Xám' },
 ];

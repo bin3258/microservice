@@ -7,6 +7,7 @@ export const orderService = {
   create: (data) => api.post('/orders', data),
   cancel: (id) => api.put(`/orders/${id}/cancel`),
   update: (id, data) => api.put(`/orders/${id}`, data),
+  getInvoice: (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
 };
 
 export const paymentService = {
@@ -34,4 +35,18 @@ export const addressService = {
   update: (id, data) => api.put(`/addresses/${id}`, data),
   delete: (id) => api.delete(`/addresses/${id}`),
   setDefault: (id, customerId) => api.put(`/addresses/${id}/default?customerId=${customerId}`),
+};
+
+export const discountService = {
+  validate: (data) => api.post('/discounts/validate', data),
+  getAvailable: (userId) => api.get('/discounts/available', { params: { userId } }),
+};
+
+export const reviewService = {
+  getByProduct: (productId) => api.get(`/reviews/product/${productId}`),
+  getProductStats: (productId) => api.get(`/reviews/product/${productId}/stats`),
+  getMyReview: (userId, productId, orderId) => api.get('/reviews/my', { params: { userId, productId, orderId } }),
+  create: (formData) => api.post('/reviews', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id, formData) => api.put(`/reviews/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id) => api.delete(`/reviews/${id}`),
 };

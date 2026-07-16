@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Typography, Card, Row, Col, Button, Tag, Modal, Form, Input, Spin, Empty, message, Space, Popconfirm, Divider } from 'antd';
-import { PlusOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined, HomeOutlined, UserOutlined, MailOutlined, PhoneOutlined, LockOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined, HomeOutlined, UserOutlined, MailOutlined, PhoneOutlined, LockOutlined, KeyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { customerService, addressService } from '../../services/orderService';
@@ -53,8 +53,11 @@ export default function ProfilePage() {
         phone: values.phone,
         email: values.email,
       });
-      if (values.password) {
-        await api.put(`/auth/${user.userId}/password`, { password: values.password });
+      if (values.currentPassword && values.newPassword) {
+        await api.put(`/auth/${user.userId}/password`, {
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        });
       }
       setAccModal(false);
       message.success('Cập nhật thành công. Vui lòng đăng nhập lại.');
@@ -149,7 +152,10 @@ export default function ProfilePage() {
         <Col xs={24} md={8}>
           <Card
             style={{ borderRadius: 12, textAlign: 'center' }}
-            actions={[<Button type="link" icon={<EditOutlined />} onClick={() => { accForm.setFieldsValue({ fullName: customer.fullName, phone: customer.phone, email: customer.email, password: '' }); setAccModal(true); }}>Sửa thông tin</Button>]}
+            actions={[
+              <Button type="link" icon={<EditOutlined />} onClick={() => { accForm.setFieldsValue({ fullName: customer.fullName, phone: customer.phone, email: customer.email, password: '' }); setAccModal(true); }}>Sửa thông tin</Button>,
+              <Button type="link" icon={<KeyOutlined />} onClick={() => navigate('/forgot-password')}>Đổi mật khẩu</Button>,
+            ]}
           >
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#fff', fontWeight: 700, marginBottom: 12 }}>
               {customer.fullName?.charAt(0)?.toUpperCase() || 'U'}
@@ -230,7 +236,33 @@ export default function ProfilePage() {
             <Input prefix={<MailOutlined />} />
           </Form.Item>
           <Divider />
-          <Form.Item name="password" label="Mật khẩu mới (để trống nếu không đổi)" rules={[{ min: 6, message: 'Tối thiểu 6 ký tự' }]}>
+          <Form.Item
+            name="currentPassword"
+            label="Mật khẩu hiện tại"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu hiện tại' },
+              { min: 6, message: 'Tối thiểu 6 ký tự' },
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu hiện tại" />
+          </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            dependencies={['currentPassword']}
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+              { min: 6, message: 'Tối thiểu 6 ký tự' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('currentPassword') !== value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu mới phải khác mật khẩu hiện tại'));
+                },
+              }),
+            ]}
+          >
             <Input.Password prefix={<LockOutlined />} placeholder="Nhập mật khẩu mới" />
           </Form.Item>
           <Button type="primary" htmlType="submit" block loading={accSubmitting}>

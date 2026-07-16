@@ -29,6 +29,9 @@ public class GatewayRoutesConfig {
 				.route("payment-service", route -> route.path("/api/payments/**").uri("lb://Payment-service"))
 				.route("customer-service", route -> route.path("/api/customers/**").uri("lb://Customer-service"))
 				.route("address-service", route -> route.path("/api/addresses/**").uri("lb://Address-service"))
+				.route("discount-service", route -> route.path("/api/discounts/**").uri("lb://discount-service"))
+				.route("review-service", route -> route.path("/api/reviews/**").uri("lb://review-service"))
+				.route("review-upload-service", route -> route.path("/uploads/reviews/**").uri("lb://review-service"))
 				.build();
 	}
 }

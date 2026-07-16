@@ -10,10 +10,12 @@ public class OrderRequest {
 	private String userPhone;
 	private String shippingAddress;
 	private String note;
+	private String paymentMethod;
 	private Double shippingFee;
 	private String city;
 	private Double customerLat;
 	private Double customerLng;
+	private String discountCode;
 	private List<OrderItemRequest> items;
 
 	public OrderRequest() {
@@ -72,6 +74,8 @@ public class OrderRequest {
 		this.note = note;
 	}
 
+	public String getPaymentMethod() { return paymentMethod; }
+	public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 	public Double getShippingFee() { return shippingFee; }
 	public void setShippingFee(Double shippingFee) { this.shippingFee = shippingFee; }
 	public String getCity() { return city; }
@@ -80,6 +84,8 @@ public class OrderRequest {
 	public void setCustomerLat(Double customerLat) { this.customerLat = customerLat; }
 	public Double getCustomerLng() { return customerLng; }
 	public void setCustomerLng(Double customerLng) { this.customerLng = customerLng; }
+	public String getDiscountCode() { return discountCode; }
+	public void setDiscountCode(String discountCode) { this.discountCode = discountCode; }
 
 	public List<OrderItemRequest> getItems() {
 		return items;

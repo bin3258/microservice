@@ -11,7 +11,7 @@ import { useCart } from '../../context/useCart';
 import { message } from 'antd';
 import {
   parseRam, parseStorage, parseBattery, categorizeScreen,
-  RAM_OPTIONS, STORAGE_OPTIONS, BATTERY_OPTIONS,
+  RAM_OPTIONS, STORAGE_OPTIONS, BATTERY_OPTIONS, COLOR_OPTIONS,
 } from './filterUtils';
 
 const { Title } = Typography;
@@ -34,6 +34,7 @@ export default function ShopPage() {
   const [selectedStorage, setSelectedStorage] = useState([]);
   const [selectedBattery, setSelectedBattery] = useState([]);
   const [selectedScreen, setSelectedScreen] = useState([]);
+  const [selectedColor, setSelectedColor] = useState([]);
 
   const resetFilters = () => {
     setSelectedCategory(null);
@@ -44,6 +45,7 @@ export default function ShopPage() {
     setSelectedStorage([]);
     setSelectedBattery([]);
     setSelectedScreen([]);
+    setSelectedColor([]);
   };
 
   useEffect(() => {
@@ -122,6 +124,15 @@ export default function ShopPage() {
       });
     }
 
+    if (selectedColor.length > 0) {
+      result = result.filter((p) => {
+        if (!p.color) return false;
+        return selectedColor.some((c) =>
+          p.color.toLowerCase().includes(c.toLowerCase())
+        );
+      });
+    }
+
     switch (sortBy) {
       case 'price-asc':
         result.sort((a, b) => getPrice(a) - getPrice(b));
@@ -140,7 +151,7 @@ export default function ShopPage() {
     }
 
     return result;
-  }, [products, selectedCategory, priceRange, searchTerm, sortBy, selectedRam, selectedStorage, selectedBattery, selectedScreen, categories]);
+  }, [products, selectedCategory, priceRange, searchTerm, sortBy, selectedRam, selectedStorage, selectedBattery, selectedScreen, selectedColor, categories]);
 
   const addToCart = async (product) => {
     if (!user) { message.info('Vui lòng đăng nhập để mua hàng'); return; }
@@ -154,8 +165,8 @@ export default function ShopPage() {
       });
       message.success('Đã thêm vào giỏ hàng');
       refreshCartCount();
-    } catch {
-      message.error('Lỗi khi thêm vào giỏ hàng');
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Lỗi khi thêm vào giỏ hàng');
     }
   };
 
@@ -178,6 +189,8 @@ export default function ShopPage() {
               border: '1px solid var(--gray-100)',
               position: 'sticky',
               top: 88,
+              maxHeight: 'calc(100vh - 110px)',
+              overflowY: 'auto',
             }}
           >
             <ShopSidebar
@@ -194,6 +207,8 @@ export default function ShopPage() {
               onBatteryChange={setSelectedBattery}
               selectedScreen={selectedScreen}
               onScreenChange={setSelectedScreen}
+              selectedColor={selectedColor}
+              onColorChange={setSelectedColor}
               onReset={resetFilters}
             />
           </div>

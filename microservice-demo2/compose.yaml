@@ -265,6 +265,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+      VNP_TMN_CODE: M9XLW4DH
+      VNP_HASH_SECRET: 8TM087422A4KW07CVGE2V0K0Z0Z0XO5O
     depends_on:
       - mariadb
       - eureka-server
@@ -306,6 +308,60 @@ services:
     networks:
       - shop-network
 
+  discount-service:
+    build:
+      context: .
+      dockerfile: discount-service/Dockerfile
+    image: shop-microservices/discount-service:latest
+    container_name: discount-service
+    expose:
+      - "8095"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+  review-service:
+    build:
+      context: .
+      dockerfile: review-service/Dockerfile
+    image: shop-microservices/review-service:latest
+    container_name: review-service
+    expose:
+      - "8096"
+    volumes:
+      - review-uploads:/app/uploads
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MARIADB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root123}
+    depends_on:
+      - mariadb
+      - eureka-server
+    networks:
+      - shop-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    image: shop-microservices/notification-service:latest
+    container_name: notification-service
+    expose:
+      - "8093"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      - eureka-server
+      - rabbitmq
+    networks:
+      - shop-network
+
 networks:
   shop-network:
     driver: bridge
@@ -318,3 +374,4 @@ volumes:
   rabbitmq-data:
   product-uploads:
   post-uploads:
+  review-uploads:

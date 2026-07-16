@@ -13,7 +13,10 @@ import BlogDetailPage from './pages/blog/BlogDetail';
 import CartPage from './pages/cart/index';
 import ContactPage from './pages/contact/index';
 import CheckoutPage from './pages/checkout/index';
+import VnpayReturnPage from './pages/VnpayReturn';
 import LoginPage from './pages/Login';
+import ForgotPasswordPage from './pages/ForgotPassword';
+import ResetPasswordPage from './pages/ResetPassword';
 import ProfilePage from './pages/profile';
 import OrdersPage from './pages/orders';
 import OrderDetailPage from './pages/orders/OrderDetail';
@@ -35,7 +38,10 @@ function AppLayout() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/vnpay-return" element={<VnpayReturnPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />

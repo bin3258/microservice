@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Typography, Card, Button, Spin, Empty, message, Tag, Table, Space, Steps, Modal, Input } from 'antd';
-import { ArrowLeftOutlined, ShoppingCartOutlined, UserOutlined, PhoneOutlined, MailOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, LoadingOutlined, EnvironmentOutlined, FileTextOutlined, EditOutlined, StopOutlined } from '@ant-design/icons';
+import { Typography, Card, Button, Spin, Empty, message, Tag, Table, Space, Steps, Modal, Input, Rate, Upload } from 'antd';
+import { ArrowLeftOutlined, ShoppingCartOutlined, UserOutlined, PhoneOutlined, MailOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, LoadingOutlined, EnvironmentOutlined, FileTextOutlined, EditOutlined, StopOutlined, DollarOutlined, BankOutlined, StarOutlined, DeleteOutlined, UploadOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { orderService } from '../../services/orderService';
+import { orderService, paymentService, reviewService } from '../../services/orderService';
 
 const { Title, Text } = Typography;
 
@@ -15,6 +15,7 @@ const STATUS_STEPS = {
 
 const STATUS_MAP = {
   PENDING: { color: 'default', icon: <ClockCircleOutlined />, text: 'Chờ xác nhận' },
+  PENDING_PAYMENT: { color: 'processing', icon: <ClockCircleOutlined />, text: 'Chờ thanh toán' },
   CONFIRMED: { color: 'blue', icon: <CheckCircleOutlined />, text: 'Đã xác nhận' },
   SHIPPING: { color: 'cyan', icon: <LoadingOutlined />, text: 'Đang giao hàng' },
   DELIVERED: { color: 'success', icon: <CheckCircleOutlined />, text: 'Đã giao hàng' },
@@ -34,10 +35,27 @@ export default function OrderDetailPage() {
   const [editAddress, setEditAddress] = useState('');
   const [editNote, setEditNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [payment, setPayment] = useState(null);
+  const [reviews, setReviews] = useState({});
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewDescription, setReviewDescription] = useState('');
+  const [reviewFiles, setReviewFiles] = useState([]);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  function getPaymentInfo(orderId) {
+    paymentService.getByOrderId(orderId)
+      .then(res => setPayment(res.data))
+      .catch(() => {});
+  }
 
   function loadOrder() {
     orderService.getById(id)
-      .then(res => setOrder(res.data))
+      .then(res => {
+        setOrder(res.data);
+        getPaymentInfo(res.data.orderId);
+      })
       .catch(() => message.error('Không thể tải thông tin đơn hàng'))
       .finally(() => setLoading(false));
   }
@@ -45,7 +63,14 @@ export default function OrderDetailPage() {
   useEffect(() => {
     let ignore = false;
     orderService.getById(id)
-      .then(res => { if (!ignore) setOrder(res.data); })
+      .then(res => {
+        if (!ignore) {
+          setOrder(res.data);
+          paymentService.getByOrderId(res.data.orderId)
+            .then(p => { if (!ignore) setPayment(p.data); })
+            .catch(() => {});
+        }
+      })
       .catch(() => { if (!ignore) message.error('Không thể tải thông tin đơn hàng'); })
       .finally(() => { if (!ignore) setLoading(false); });
     return () => { ignore = true; };
@@ -90,6 +115,95 @@ export default function OrderDetailPage() {
     }
   };
 
+  useEffect(() => {
+    if (order && (order.status === 'DELIVERED' || order.status === 'COMPLETED') && user) {
+      (order.items || []).forEach((item) => {
+        const pid = item.product?.id || item.productId;
+        if (!pid) return;
+        const key = pid + '-' + order.orderId;
+        reviewService.getMyReview(user.userId, pid, order.orderId).then(res => {
+          const data = res.data;
+          if (data.reviewed) setReviews(prev => ({ ...prev, [key]: data.review }));
+        }).catch(() => {});
+      });
+    }
+  }, [order]);
+
+  const openReviewModal = (item) => {
+    const pid = item.product?.id || item.productId;
+    const existing = reviews[pid + '-' + order.orderId];
+    setReviewTarget(item);
+    setReviewRating(existing?.rating || 5);
+    setReviewDescription(existing?.description || '');
+    setReviewFiles([]);
+    setReviewModalOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewTarget) return;
+    const pid = reviewTarget.product?.id || reviewTarget.productId;
+    const key = pid + '-' + order.orderId;
+    const existing = reviews[key];
+    setReviewSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('productId', pid);
+      formData.append('productName', reviewTarget.product?.name || '');
+      formData.append('orderId', order.orderId);
+      formData.append('rating', reviewRating);
+      formData.append('description', reviewDescription);
+      reviewFiles.forEach((file) => formData.append('files', file.originFileObj || file));
+      if (existing) {
+        await reviewService.update(existing.id, formData);
+        message.success('Đã cập nhật đánh giá');
+      } else {
+        const res = await reviewService.create(formData);
+        setReviews(prev => ({ ...prev, [key]: res.data }));
+        message.success('Đã gửi đánh giá');
+      }
+      setReviewModalOpen(false);
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Gửi đánh giá thất bại');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleDeleteReview = (item) => {
+    const pid = item.product?.id || item.productId;
+    const key = pid + '-' + order.orderId;
+    const existing = reviews[key];
+    if (!existing) return;
+    Modal.confirm({
+      title: 'Xóa đánh giá',
+      content: 'Bạn có chắc muốn xóa đánh giá này?',
+      onOk: async () => {
+        try {
+          await reviewService.delete(existing.id);
+          setReviews(prev => { const n = { ...prev }; delete n[key]; return n; });
+          message.success('Đã xóa đánh giá');
+        } catch (err) {
+          message.error(err.response?.data?.message || 'Xóa thất bại');
+        }
+      },
+    });
+  };
+
+  const downloadInvoice = () => {
+    orderService.getInvoice(order.orderId)
+      .then(res => {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `HD-${order.orderId}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(() => message.error('Tải hoá đơn thất bại'));
+  };
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
   if (loading) return <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>;
   if (!order) return <div style={{ textAlign: 'center', padding: 80 }}><Empty description="Không tìm thấy đơn hàng" /></div>;
 
@@ -119,9 +233,17 @@ export default function OrderDetailPage() {
             />
           )}
           <div>
-            <Text strong>{product?.name}</Text>
+            <a onClick={() => navigate(`/product/${product?.id}`)} style={{ fontWeight: 600 }}>{product?.name}</a>
             <br />
             <Text style={{ color: 'var(--gray-400)', fontSize: 12 }}>Mã SP: #{product?.id}</Text>
+            <div style={{ marginTop: 4 }}>
+              {product?.ram && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 8 }}>RAM: {product.ram}</Text>}
+              {product?.storage && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 8 }}>ROM: {product.storage}</Text>}
+              {product?.screenResolution && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 8 }}>Màn hình: {product.screenResolution}</Text>}
+              {product?.screenTechnology && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 8 }}>{product.screenTechnology}</Text>}
+              {product?.battery && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 8 }}>Pin: {product.battery}</Text>}
+              {product?.color && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 8 }}>{product.color}</Text>}
+            </div>
           </div>
         </Space>
       ),
@@ -149,6 +271,25 @@ export default function OrderDetailPage() {
       align: 'right',
       render: (val) => <Text strong style={{ color: 'var(--primary)' }}>{val?.toLocaleString('vi-VN')}₫</Text>,
     },
+    ...((order.status === 'DELIVERED' || order.status === 'COMPLETED') ? [{
+      title: 'Đánh giá',
+      key: 'review',
+      width: 120,
+      align: 'center',
+      render: (_, item) => {
+        const pid = item.product?.id || item.productId;
+        const existing = reviews[pid + '-' + order.orderId];
+        if (existing) {
+          return (
+            <Space>
+              <Button size="small" icon={<EditOutlined />} onClick={() => openReviewModal(item)} />
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteReview(item)} />
+            </Space>
+          );
+        }
+        return <Button size="small" icon={<StarOutlined />} onClick={() => openReviewModal(item)}>Đánh giá</Button>;
+      },
+    }] : []),
   ];
 
   return (
@@ -228,6 +369,36 @@ export default function OrderDetailPage() {
         </Card>
       )}
 
+      {payment && (
+        <Card style={{ borderRadius: 12, marginBottom: 20, border: '1px solid var(--gray-100)' }}>
+          <Space size={24}>
+            <Space>
+              {payment.paymentMethod === 'VNPAY' ? <BankOutlined style={{ color: 'var(--gray-400)' }} /> : <DollarOutlined style={{ color: 'var(--gray-400)' }} />}
+              <div>
+                <Text style={{ color: 'var(--gray-400)', fontSize: 12 }}>Phương thức thanh toán</Text>
+                <br />
+                <Text strong>{payment.paymentMethod === 'VNPAY' ? 'VNPay' : 'COD'}</Text>
+              </div>
+            </Space>
+            <Space>
+              <div>
+                <Text style={{ color: 'var(--gray-400)', fontSize: 12 }}>Trạng thái thanh toán</Text>
+                <br />
+                {payment.status === 'FAILED' ? (
+                  <Text strong style={{ color: 'var(--error)' }}>Giao dịch không thành công</Text>
+                ) : payment.status === 'COMPLETED' ? (
+                  <Text strong style={{ color: 'var(--success)' }}>Đã thanh toán</Text>
+                ) : payment.status === 'PROCESSING' || payment.status === 'PENDING' ? (
+                  <Text strong>Chờ thanh toán</Text>
+                ) : (
+                  <Text strong>{payment.status}</Text>
+                )}
+              </div>
+            </Space>
+          </Space>
+        </Card>
+      )}
+
       {order.note && (
         <Card style={{ borderRadius: 12, marginBottom: 20, border: '1px solid var(--gray-100)' }}>
           <Space>
@@ -263,6 +434,17 @@ export default function OrderDetailPage() {
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
               )}
+              {order.discountCode && order.discountAmount > 0 && (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={2}>
+                    <Text>Mã giảm giá <Tag style={{ fontSize: 11 }}>{order.discountCode}</Tag></Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="center" />
+                  <Table.Summary.Cell index={2} align="right">
+                    <Text style={{ color: '#52c41a' }}>-{order.discountAmount?.toLocaleString('vi-VN')}₫</Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              )}
               <Table.Summary.Row>
                 <Table.Summary.Cell index={0} colSpan={2}>
                   <Text strong>Tổng cộng</Text>
@@ -282,12 +464,13 @@ export default function OrderDetailPage() {
       </Card>
 
       <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
-        {order.status === 'PENDING' && (
+        {(order.status === 'PENDING' || order.status === 'PENDING_PAYMENT') && (
           <>
-            <Button icon={<EditOutlined />} onClick={openEditModal}>Sửa thông tin</Button>
+            {order.status === 'PENDING' && <Button icon={<EditOutlined />} onClick={openEditModal}>Sửa thông tin</Button>}
             <Button danger icon={<StopOutlined />} onClick={handleCancel}>Hủy đơn hàng</Button>
           </>
         )}
+        <Button icon={<FilePdfOutlined />} onClick={downloadInvoice}>Xuất hoá đơn</Button>
       </div>
 
       <Modal
@@ -316,6 +499,46 @@ export default function OrderDetailPage() {
               rows={2}
               style={{ marginTop: 4 }}
             />
+          </div>
+        </Space>
+      </Modal>
+
+      <Modal
+        title={<span><StarOutlined /> Đánh giá sản phẩm</span>}
+        open={reviewModalOpen}
+        onOk={handleSubmitReview}
+        onCancel={() => setReviewModalOpen(false)}
+        confirmLoading={reviewSubmitting}
+        okText={reviews[reviewTarget?.product?.id + '-' + order.orderId || reviewTarget?.productId + '-' + order.orderId] ? 'Cập nhật' : 'Gửi đánh giá'}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={16}>
+          <div style={{ textAlign: 'center' }}>
+            <Text strong style={{ fontSize: 16, display: 'block', marginBottom: 8 }}>{reviewTarget?.product?.name}</Text>
+            <Rate value={reviewRating} onChange={setReviewRating} style={{ fontSize: 28 }} />
+          </div>
+          <div>
+            <Text strong>Mô tả</Text>
+            <Input.TextArea
+              rows={3}
+              placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+              value={reviewDescription}
+              onChange={(e) => setReviewDescription(e.target.value)}
+              style={{ marginTop: 4 }}
+            />
+          </div>
+          <div>
+            <Text strong>Hình ảnh</Text>
+            <Upload
+              listType="picture-card"
+              fileList={reviewFiles}
+              onChange={({ fileList }) => setReviewFiles(fileList)}
+              beforeUpload={() => false}
+              multiple
+              accept="image/*"
+              style={{ marginTop: 4 }}
+            >
+              <div><UploadOutlined /><div style={{ marginTop: 4 }}>Tải ảnh</div></div>
+            </Upload>
           </div>
         </Space>
       </Modal>

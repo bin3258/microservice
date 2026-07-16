@@ -10,4 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface OrderClient {
     @PutMapping("/api/orders/{id}/status")
     void updateOrderStatus(@PathVariable("id") Long orderId, @RequestBody OrderStatusRequest request);
+
+    @PutMapping("/api/orders/{id}/confirm-payment")
+    void confirmPayment(@PathVariable("id") Long orderId);
 }

@@ -36,8 +36,8 @@ export default function CartPage() {
         ),
       );
       refreshCartCount();
-    } catch {
-      message.error('Lỗi cập nhật số lượng');
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Lỗi cập nhật số lượng');
     }
   };
 

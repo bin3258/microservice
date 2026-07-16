@@ -28,17 +28,19 @@ public class CartService {
 
     @Transactional
     public CartResponse addItem(Long userId, CartRequest request) {
-        checkStock(request.getProductId(), request.getQuantity());
-
         List<CartItem> existing = cartRepository.findByUserIdAndProductId(userId, request.getProductId());
         if (!existing.isEmpty()) {
             CartItem item = existing.get(0);
             if (existing.size() > 1) {
                 cartRepository.deleteAll(existing.subList(1, existing.size()));
             }
-            item.setQuantity(item.getQuantity() + request.getQuantity());
+            int newQty = item.getQuantity() + request.getQuantity();
+            checkStock(request.getProductId(), newQty);
+            item.setQuantity(newQty);
             return toResponse(cartRepository.save(item));
         }
+
+        checkStock(request.getProductId(), request.getQuantity());
 
         CartItem item = new CartItem();
         item.setUserId(userId);
@@ -100,12 +102,12 @@ public class CartService {
             var stock = inventoryClient.getStock(productId);
             if (stock.getAvailableQuantity() < quantity) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Sản phẩm " + productId + " không đủ hàng. Còn: " + stock.getAvailableQuantity());
+                        "Rất tiếc, sản phẩm này trong kho không đủ số lượng bạn yêu cầu. Hiện chỉ còn " + stock.getAvailableQuantity() + " sản phẩm.");
             }
         } catch (FeignException.NotFound e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + productId + " không có trong kho");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rất tiếc, sản phẩm này hiện không có trong kho.");
         } catch (FeignException e) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Không thể kết nối dịch vụ kho hàng");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Rất tiếc, hiện tại không thể kiểm tra tồn kho. Vui lòng thử lại sau.");
         }
     }
 

@@ -12,13 +12,16 @@ public class OrderResponse {
 	private Double shippingFee;
 	private String city;
 	private String status;
+	private String paymentMethod;
 	private String shippingAddress;
 	private String note;
+	private String discountCode;
+	private Double discountAmount;
 
 	public OrderResponse() {
 	}
 
-	public OrderResponse(Long orderId, UserInfo user, List<OrderLineResponse> items, Integer totalQuantity, Double totalPrice, Double shippingFee, String city, String status, String shippingAddress, String note) {
+	public OrderResponse(Long orderId, UserInfo user, List<OrderLineResponse> items, Integer totalQuantity, Double totalPrice, Double shippingFee, String city, String status, String paymentMethod, String shippingAddress, String note, String discountCode, Double discountAmount) {
 		this.orderId = orderId;
 		this.user = user;
 		this.items = items;
@@ -27,8 +30,11 @@ public class OrderResponse {
 		this.shippingFee = shippingFee;
 		this.city = city;
 		this.status = status;
+		this.paymentMethod = paymentMethod;
 		this.shippingAddress = shippingAddress;
 		this.note = note;
+		this.discountCode = discountCode;
+		this.discountAmount = discountAmount;
 	}
 
 	public Long getOrderId() {
@@ -85,6 +91,9 @@ public class OrderResponse {
 		this.status = status;
 	}
 
+	public String getPaymentMethod() { return paymentMethod; }
+	public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
 	public String getShippingAddress() {
 		return shippingAddress;
 	}
@@ -100,4 +109,9 @@ public class OrderResponse {
 	public void setNote(String note) {
 		this.note = note;
 	}
+
+	public String getDiscountCode() { return discountCode; }
+	public void setDiscountCode(String discountCode) { this.discountCode = discountCode; }
+	public Double getDiscountAmount() { return discountAmount; }
+	public void setDiscountAmount(Double discountAmount) { this.discountAmount = discountAmount; }
 }

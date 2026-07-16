@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"/>
+<style>
+@page { size: A4; margin: 1.5cm 1.8cm; }
+body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #222; margin: 0; padding: 0; }
+table { width: 100%; border-collapse: collapse; }
+.header { text-align: center; margin-bottom: 18px; }
+.header h1 { font-size: 18pt; margin: 0 0 2px 0; text-transform: uppercase; }
+.header .shop-name { font-size: 14pt; font-weight: bold; color: #1a56db; }
+.header .shop-info { font-size: 9pt; color: #555; margin-top: 2px; }
+.title { text-align: center; font-size: 16pt; font-weight: bold; margin: 16px 0 14px 0; text-transform: uppercase; border-bottom: 2px solid #222; padding-bottom: 8px; }
+.info-table td { padding: 2px 4px; font-size: 10pt; vertical-align: top; }
+.info-table .label { width: 120px; color: #555; }
+.items-table { margin-top: 10px; }
+.items-table th { background: #1a56db; color: #fff; font-size: 10pt; padding: 6px 4px; text-align: center; font-weight: bold; }
+.items-table td { padding: 5px 4px; font-size: 10pt; border-bottom: 1px solid #ddd; text-align: center; }
+.items-table .left { text-align: left; }
+.items-table .right { text-align: right; }
+.summary-table { margin-top: 8px; }
+.summary-table td { padding: 3px 4px; font-size: 10pt; }
+.summary-table .label-cell { text-align: right; width: 80%; padding-right: 12px; }
+.summary-table .value-cell { text-align: right; width: 20%; font-weight: bold; padding-right: 4px; }
+.total-row td { font-size: 12pt; font-weight: bold; border-top: 2px solid #222; padding-top: 6px; }
+.payment-info { margin-top: 14px; font-size: 10pt; }
+.payment-info td { padding: 2px 4px; }
+.footer { margin-top: 28px; }
+.signature-table td { text-align: center; width: 50%; padding-top: 36px; font-size: 10pt; }
+.signature-table .line { border-top: 1px solid #222; width: 60%; margin: 0 auto 4px auto; padding-top: 4px; }
+.note-text { font-size: 9pt; color: #555; font-style: italic; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="shop-name">CỬA HÀNG SHOP BÁN LẺ</div>
+  <div class="shop-info">
+    Địa chỉ: 123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh<br/>
+    Điện thoại: 0123 456 789 &nbsp;|&nbsp; Email: support@shop.com<br/>
+    MST: 0123456789
+  </div>
+</div>
+
+<div class="title">HOÁ ĐƠN BÁN HÀNG</div>
+
+<table class="info-table">
+<tr><td class="label">Số hoá đơn:</td><td><strong>HD-<span th:text="${invoice.orderId}">1</span></strong></td></tr>
+<tr><td class="label">Ngày xuất:</td><td th:text="${#temporals.format(invoice.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2025</td></tr>
+<tr><td class="label">Khách hàng:</td><td th:text="${invoice.customerName}">Nguyen Van A</td></tr>
+<tr><td class="label">SĐT:</td><td th:text="${invoice.customerPhone}">0123456789</td></tr>
+<tr><td class="label">Email:</td><td th:text="${invoice.customerEmail}">a@example.com</td></tr>
+<tr th:if="${invoice.shippingAddress}"><td class="label">Địa chỉ giao hàng:</td><td th:text="${invoice.shippingAddress}">123 ABC</td></tr>
+</table>
+
+<table class="items-table">
+<thead>
+<tr>
+  <th style="width:5%">STT</th>
+  <th style="width:40%">Tên sản phẩm</th>
+  <th style="width:10%">SL</th>
+  <th style="width:20%">Đơn giá</th>
+  <th style="width:25%">Thành tiền</th>
+</tr>
+</thead>
+<tbody>
+<tr th:each="item, iter : ${invoice.items}">
+  <td th:text="${iter.index + 1}">1</td>
+  <td class="left" th:text="${item.name}">Product name</td>
+  <td th:text="${item.quantity}">1</td>
+  <td class="right" th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT') + '₫'}">100,000₫</td>
+  <td class="right" th:text="${#numbers.formatDecimal(item.lineTotal, 0, 'COMMA', 0, 'POINT') + '₫'}">100,000₫</td>
+</tr>
+</tbody>
+</table>
+
+<table class="summary-table">
+<tr>
+  <td class="label-cell">Tạm tính:</td>
+  <td class="value-cell" th:text="${#numbers.formatDecimal(invoice.subtotal, 0, 'COMMA', 0, 'POINT') + '₫'}">1,000,000₫</td>
+</tr>
+<tr th:if="${invoice.shippingFee > 0}">
+  <td class="label-cell">Phí vận chuyển:</td>
+  <td class="value-cell" th:text="${#numbers.formatDecimal(invoice.shippingFee, 0, 'COMMA', 0, 'POINT') + '₫'}">30,000₫</td>
+</tr>
+<tr th:if="${invoice.discountCode != null}">
+  <td class="label-cell">Giảm giá (<span th:text="${invoice.discountCode}">CODE</span>):</td>
+  <td class="value-cell" style="color:#16a34a" th:text="'-' + ${#numbers.formatDecimal(invoice.discountAmount, 0, 'COMMA', 0, 'POINT') + '₫'}">-50,000₫</td>
+</tr>
+<tr class="total-row">
+  <td class="label-cell">Tổng cộng:</td>
+  <td class="value-cell" style="color:#1a56db; font-size:13pt" th:text="${#numbers.formatDecimal(invoice.totalPrice, 0, 'COMMA', 0, 'POINT') + '₫'}">1,000,000₫</td>
+</tr>
+</table>
+
+<table class="payment-info">
+<tr><td style="width:120px; color:#555">Phương thức:</td><td th:text="${invoice.paymentMethod}">COD</td></tr>
+<tr><td style="color:#555">Trạng thái TT:</td><td th:text="${invoice.paymentStatus}">COMPLETED</td></tr>
+<tr th:if="${invoice.transactionId}"><td style="color:#555">Mã giao dịch:</td><td th:text="${invoice.transactionId}">TXN123</td></tr>
+</table>
+
+<div th:if="${invoice.note}" class="note-text" th:text="'Ghi chú: ' + ${invoice.note}">Ghi chú: ...</div>
+
+<table class="footer signature-table">
+<tr>
+  <td>
+    <div class="line">Người mua hàng</div>
+    <div style="font-size:9pt; color:#888">(Ký, họ tên)</div>
+  </td>
+  <td>
+    <div class="line">Người bán hàng</div>
+    <div style="font-size:9pt; color:#888">(Ký, họ tên)</div>
+  </td>
+</tr>
+</table>
+
+</body>
+</html>

@@ -43,7 +43,7 @@ public class AuthController {
 
     @PutMapping("/{userId}/password")
     public ResponseEntity<Void> changePassword(@PathVariable Long userId, @Valid @RequestBody PasswordChangeRequest request) {
-        authService.changePassword(userId, request.getPassword());
+        authService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
         return ResponseEntity.ok().build();
     }
 
@@ -62,6 +62,18 @@ public class AuthController {
     @PutMapping("/{userId}/email")
     public ResponseEntity<Void> updateEmail(@PathVariable Long userId, @Valid @RequestBody EmailUpdateRequest request) {
         authService.updateEmail(userId, request.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
         return ResponseEntity.ok().build();
     }
 

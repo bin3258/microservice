@@ -27,16 +27,27 @@ public class OrderServiceApplication {
 			if (repository.count() == 0) {
 				repository.saveAll(List.of(
 					createSampleOrder(1L, "Nguyen Van A", "vana@example.com", "0900000001", List.of(
-						new OrderItem(null, 1L, "Apple iPhone", "https://example.com/images/iphone.jpg", 2, 699.0, 1398.0),
-						new OrderItem(null, 3L, "Google Pixel", "https://example.com/images/pixel.jpg", 1, 499.0, 499.0)
+						createOrderItem(1L, "Apple iPhone", "https://example.com/images/iphone.jpg", 2, 699.0, 1398.0),
+						createOrderItem(3L, "Google Pixel", "https://example.com/images/pixel.jpg", 1, 499.0, 499.0)
 					)),
 					createSampleOrder(2L, "Tran Thi B", "thib@example.com", "0900000002", List.of(
-						new OrderItem(null, 2L, "Samsung Galaxy", "https://example.com/images/galaxy.jpg", 1, 599.0, 599.0),
-						new OrderItem(null, 3L, "Google Pixel", "https://example.com/images/pixel.jpg", 2, 499.0, 998.0)
+						createOrderItem(2L, "Samsung Galaxy", "https://example.com/images/galaxy.jpg", 1, 599.0, 599.0),
+						createOrderItem(3L, "Google Pixel", "https://example.com/images/pixel.jpg", 2, 499.0, 998.0)
 					))
 				));
 			}
 		};
+	}
+
+	private OrderItem createOrderItem(Long productId, String productName, String productImg, int quantity, double unitPrice, double lineTotal) {
+		OrderItem item = new OrderItem();
+		item.setProductId(productId);
+		item.setProductName(productName);
+		item.setProductImg(productImg);
+		item.setQuantity(quantity);
+		item.setUnitPrice(unitPrice);
+		item.setLineTotal(lineTotal);
+		return item;
 	}
 
 	private Order createSampleOrder(Long userId, String userName, String userEmail, String userPhone, List<OrderItem> items) {

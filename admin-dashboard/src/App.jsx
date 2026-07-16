@@ -17,6 +17,8 @@ import Users from './pages/Users';
 import Customers from './pages/Customers';
 import Inventory from './pages/Inventory';
 import Warehouses from './pages/Warehouses';
+import Discounts from './pages/Discounts';
+import Reviews from './pages/Reviews';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -61,6 +63,8 @@ function AppRoutes() {
         <Route path="customers" element={<Customers />} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="warehouses" element={<Warehouses />} />
+        <Route path="discounts" element={<Discounts />} />
+        <Route path="reviews" element={<Reviews />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

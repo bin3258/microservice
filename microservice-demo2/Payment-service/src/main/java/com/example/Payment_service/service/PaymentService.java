@@ -63,6 +63,7 @@ public class PaymentService {
         payment.setOrderId(request.getOrderId());
         payment.setAmount(request.getAmount());
         payment.setStatus("PROCESSING");
+        payment.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
         payment.setTransactionId(request.getTransactionId() != null ? request.getTransactionId() : UUID.randomUUID().toString());
         payment = paymentRepository.save(payment);
 
@@ -108,6 +109,8 @@ public class PaymentService {
 
     private PaymentResponse toResponse(Payment p) {
         return new PaymentResponse(p.getId(), p.getOrderId(), p.getAmount(),
-                p.getStatus(), p.getTransactionId(), p.getCreatedAt(), p.getUpdatedAt());
+                p.getStatus(), p.getPaymentMethod(), p.getTransactionId(),
+                p.getVnpTxnRef(), p.getVnpResponseCode(), p.getVnpTransactionNo(),
+                p.getVnpBankCode(), p.getCreatedAt(), p.getUpdatedAt());
     }
 }

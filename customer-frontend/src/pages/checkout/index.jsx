@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Form, Input, Button, Typography, Row, Col, Divider, message, Select, Space, Card, Radio, Spin, Table } from 'antd';
-import { UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, CreditCardOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Typography, Row, Col, Divider, message, Select, Space, Card, Radio, Spin, Table, Modal, Tag, List } from 'antd';
+import { UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, CreditCardOutlined, GiftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { orderService, paymentService } from '../../services/orderService';
+import { orderService, paymentService, discountService } from '../../services/orderService';
 import { customerService, addressService } from '../../services/orderService';
 import { cartService } from '../../services/orderService';
+import { productService } from '../../services/productService';
 import { useAuth } from '../../context/useAuth';
 import { useCart } from '../../context/useCart';
 import api from '../../api/axiosClient';
@@ -28,12 +29,21 @@ export default function CheckoutPage() {
   const [cartLoading, setCartLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
+  const [productMap, setProductMap] = useState({});
   const [warehouses, setWarehouses] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [warehouseSelections, setWarehouseSelections] = useState({});
   const [customerLat, setCustomerLat] = useState(null);
   const [customerLng, setCustomerLng] = useState(null);
   const [shippingFee, setShippingFee] = useState(0);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountType, setDiscountType] = useState('');
+  const [discountValid, setDiscountValid] = useState(false);
+  const [discountChecking, setDiscountChecking] = useState(false);
+  const [availableDiscounts, setAvailableDiscounts] = useState([]);
+  const [discountModalOpen, setDiscountModalOpen] = useState(false);
+  const [discountsLoading, setDiscountsLoading] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -61,6 +71,14 @@ export default function CheckoutPage() {
 
         const items = Array.isArray(cartRes.data) ? cartRes.data : (cartRes.data?.items || []);
         setCartItems(items);
+
+        const uniqueIds = [...new Set(items.map(i => i.productId || i.product?.id).filter(Boolean))];
+        const productResults = await Promise.all(uniqueIds.map(id => productService.getById(id).catch(() => null)));
+        const map = {};
+        productResults.forEach(res => {
+          if (res?.data) map[res.data.id] = res.data;
+        });
+        setProductMap(map);
       } catch {
         message.error('Không thể tải thông tin');
       } finally {
@@ -78,6 +96,15 @@ export default function CheckoutPage() {
     });
     return map;
   }, [inventory]);
+
+  useEffect(() => {
+    if (!user) return;
+    setDiscountsLoading(true);
+    discountService.getAvailable(user.userId)
+      .then(res => setAvailableDiscounts(res.data || []))
+      .catch(() => {})
+      .finally(() => setDiscountsLoading(false));
+  }, [user]);
 
   useEffect(() => {
     if (!selectedAddr || !addresses.length) return;
@@ -152,7 +179,7 @@ export default function CheckoutPage() {
     (sum, item) => sum + (item.unitPrice || item.product?.price || 0) * (item.quantity || 1), 0
   ), [cartItems]);
 
-  const grandTotal = totalAmount + shippingFee;
+  const grandTotal = totalAmount + shippingFee - discountAmount;
 
   const handleSelectWarehouse = (productId, warehouseId) => {
     setWarehouseSelections((prev) => {
@@ -174,6 +201,77 @@ export default function CheckoutPage() {
     });
   };
 
+  const applyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    setDiscountChecking(true);
+    try {
+      const res = await discountService.validate({
+        code: discountCode.trim(),
+        userId: user.userId,
+        orderTotal: totalAmount + shippingFee,
+        shippingFee,
+      });
+      const data = res.data;
+      if (data.valid) {
+        setDiscountAmount(data.discountAmount);
+        setDiscountType(data.type);
+        setDiscountValid(true);
+        message.success(data.message || 'Áp dụng mã giảm giá thành công');
+      } else {
+        setDiscountAmount(0);
+        setDiscountType('');
+        setDiscountValid(false);
+        message.error(data.message || 'Mã giảm giá không hợp lệ');
+      }
+    } catch {
+      message.error('Không thể kiểm tra mã giảm giá');
+    } finally {
+      setDiscountChecking(false);
+    }
+  };
+
+  const removeDiscount = () => {
+    setDiscountCode('');
+    setDiscountAmount(0);
+    setDiscountType('');
+    setDiscountValid(false);
+  };
+
+  const selectDiscount = async (discount) => {
+    setDiscountCode(discount.code);
+    setDiscountModalOpen(false);
+    setTimeout(() => applyDiscountWithCode(discount.code), 100);
+  };
+
+  const applyDiscountWithCode = async (code) => {
+    if (!code.trim()) return;
+    setDiscountChecking(true);
+    try {
+      const res = await discountService.validate({
+        code: code.trim(),
+        userId: user.userId,
+        orderTotal: totalAmount + shippingFee,
+        shippingFee,
+      });
+      const data = res.data;
+      if (data.valid) {
+        setDiscountAmount(data.discountAmount);
+        setDiscountType(data.type);
+        setDiscountValid(true);
+        message.success(data.message || 'Áp dụng mã giảm giá thành công');
+      } else {
+        setDiscountAmount(0);
+        setDiscountType('');
+        setDiscountValid(false);
+        message.error(data.message || 'Mã giảm giá không hợp lệ');
+      }
+    } catch {
+      message.error('Không thể kiểm tra mã giảm giá');
+    } finally {
+      setDiscountChecking(false);
+    }
+  };
+
   const handleSubmit = async (values) => {
     if (!selectedAddr) {
       message.warning('Vui lòng chọn địa chỉ giao hàng');
@@ -188,17 +286,20 @@ export default function CheckoutPage() {
 
     setProcessing(true);
     try {
+      const paymentMethod = values.paymentMethod === 'vnpay' ? 'VNPAY' : 'COD';
       const orderPayload = {
         userId: user.userId,
         userName: values.fullName,
         userEmail: values.email,
         userPhone: values.phone,
+        paymentMethod,
         shippingAddress: `${addr.street}${addr.ward ? `, ${addr.ward}` : ''}, ${addr.city}`,
         note: values.note || '',
         shippingFee,
         city: addr.city,
         customerLat,
         customerLng,
+        discountCode: discountValid ? discountCode.trim() : null,
         items: cartItems.map((item) => {
           const productId = item.productId || item.product?.id;
           const warehouseId = warehouseSelections[productId];
@@ -219,12 +320,21 @@ export default function CheckoutPage() {
       await cartService.clearCart(user.userId);
       refreshCartCount();
 
-      try {
-        await paymentService.create({ orderId, amount: totalAmount });
-      } catch { /* ignore */ }
-
-      message.success('Đặt hàng thành công!');
-      navigate(`/orders/${orderId}`);
+      if (paymentMethod === 'VNPAY') {
+        const payRes = await api.post('/payments/vnpay/create', {
+          orderId,
+          amount: totalAmount,
+          paymentMethod: 'VNPAY',
+        });
+        const paymentUrl = payRes.data.paymentUrl;
+        window.location.href = paymentUrl;
+      } else {
+        try {
+          await paymentService.create({ orderId, amount: totalAmount, paymentMethod: 'COD' });
+        } catch { /* ignore */ }
+        message.success('Đặt hàng thành công!');
+        navigate(`/orders/${orderId}`);
+      }
     } catch (err) {
       message.error(err.response?.data?.message || 'Đặt hàng thất bại');
     } finally {
@@ -237,17 +347,31 @@ export default function CheckoutPage() {
   const itemColumns = [
     {
       title: 'Sản phẩm', dataIndex: 'productName', key: 'product',
-      render: (name, record) => (
-        <Space>
-          <img src={(() => {
-            const img = record.productImg || record.product?.img;
-            if (!img) return 'https://placehold.co/48x48';
-            if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/') || img.startsWith('uploads/')) return img;
-            return `/uploads/${img}`;
-          })()} alt={name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
-          <Text strong style={{ fontSize: 13 }}>{name || record.product?.name}</Text>
-        </Space>
-      ),
+      render: (name, record) => {
+        const pid = record.productId || record.product?.id;
+        const prod = productMap[pid] || {};
+        return (
+          <Space>
+            <img src={(() => {
+              const img = record.productImg || record.product?.img;
+              if (!img) return 'https://placehold.co/48x48';
+              if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/') || img.startsWith('uploads/')) return img;
+              return `/uploads/${img}`;
+            })()} alt={name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+            <div>
+              <Text strong style={{ fontSize: 13 }}>{name || record.product?.name}</Text>
+              <div style={{ marginTop: 2 }}>
+                {prod.ram && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 6 }}>RAM: {prod.ram}</Text>}
+                {prod.storage && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 6 }}>ROM: {prod.storage}</Text>}
+                {prod.screenResolution && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 6 }}>MH: {prod.screenResolution}</Text>}
+                {prod.screenTechnology && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 6 }}>{prod.screenTechnology}</Text>}
+                {prod.battery && <Text style={{ color: 'var(--gray-500)', fontSize: 11, marginRight: 6 }}>Pin: {prod.battery}</Text>}
+                {prod.color && <Text style={{ color: 'var(--gray-500)', fontSize: 11 }}>{prod.color}</Text>}
+              </div>
+            </div>
+          </Space>
+        );
+      },
     },
     { title: 'Đơn giá', dataIndex: 'unitPrice', key: 'price', width: 100, align: 'right',
       render: (price, record) => `${(price || record.product?.price || 0).toLocaleString('vi-VN')}₫` },
@@ -268,7 +392,7 @@ export default function CheckoutPage() {
           .filter((inv) => inv.availableQuantity >= record.quantity)
           .map((inv) => {
             const wh = warehouses.find((w) => w.id === inv.warehouseId);
-            let label = wh?.name || `Kho #${inv.warehouseId}`;
+            let label = inv.warehouseName || wh?.name || `Kho #${inv.warehouseId}`;
             if (wh && customerLat != null && customerLng != null && wh.latitude != null && wh.longitude != null) {
               const km = haversine(customerLat, customerLng, wh.latitude, wh.longitude);
               label += ` (${km.toFixed(1)}km)`;
@@ -378,8 +502,7 @@ export default function CheckoutPage() {
               <Form.Item name="paymentMethod">
                 <Select options={[
                   { value: 'cod', label: 'Thanh toán khi nhận hàng (COD)' },
-                  { value: 'bank', label: 'Chuyển khoản ngân hàng' },
-                  { value: 'card', label: 'Thẻ tín dụng / Ghi nợ' },
+                  { value: 'vnpay', label: 'Thanh toán qua VNPay' },
                 ]} />
               </Form.Item>
 
@@ -408,7 +531,34 @@ export default function CheckoutPage() {
                 <Text strong style={{ color: 'var(--primary)' }}>{shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}₫` : '—'}</Text>
               </div>
             </Space>
-            <Divider style={{ margin: '16px 0' }} />
+
+            <Divider style={{ margin: '12px 0' }} />
+            <Space.Compact style={{ width: '100%' }}>
+              <Input
+                size="small"
+                placeholder="Nhập mã giảm giá"
+                value={discountCode}
+                onChange={(e) => {
+                  setDiscountCode(e.target.value);
+                  if (discountValid) removeDiscount();
+                }}
+                onPressEnter={applyDiscount}
+                disabled={discountChecking}
+              />
+              <Button size="small" type={discountValid ? 'default' : 'primary'} onClick={discountValid ? removeDiscount : applyDiscount} loading={discountChecking} danger={discountValid}>
+                {discountValid ? 'Hủy' : 'Áp dụng'}
+              </Button>
+              <Button size="small" icon={<GiftOutlined />} onClick={() => setDiscountModalOpen(true)} loading={discountsLoading}>
+                Chọn mã
+              </Button>
+            </Space.Compact>
+            {discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                <Text style={{ color: 'var(--green-600, #52c41a)' }}>Giảm giá</Text>
+                <Text strong style={{ color: 'var(--green-600, #52c41a)' }}>-{discountAmount.toLocaleString('vi-VN')}₫</Text>
+              </div>
+            )}
+            <Divider style={{ margin: '12px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text strong style={{ fontSize: 15 }}>Tổng cộng</Text>
               <Title level={4} style={{ color: 'var(--primary)', margin: 0, fontSize: 22 }}>
@@ -421,6 +571,57 @@ export default function CheckoutPage() {
           </div>
         </Col>
       </Row>
+
+      <Modal
+        title={<span><GiftOutlined /> Chọn mã giảm giá</span>}
+        open={discountModalOpen}
+        onCancel={() => setDiscountModalOpen(false)}
+        footer={null}
+        width={480}
+      >
+        {availableDiscounts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--gray-400)' }}>
+            <Text>Bạn không có mã giảm giá nào khả dụng</Text>
+          </div>
+        ) : (
+          <List
+            dataSource={availableDiscounts}
+            renderItem={(item) => (
+              <List.Item
+                actions={[
+                  <Button type="primary" size="small" onClick={() => selectDiscount(item)} disabled={discountValid}>
+                    Áp dụng
+                  </Button>,
+                ]}
+              >
+                <List.Item.Meta
+                  title={
+                    <Space>
+                      <Text strong style={{ textTransform: 'uppercase' }}>{item.code}</Text>
+                      <Tag color={item.type === 'SHIPPING' ? 'blue' : 'green'}>
+                        {item.type === 'SHIPPING' ? 'Giảm ship' : 'Giảm SP'}
+                      </Tag>
+                    </Space>
+                  }
+                  description={
+                    <div>
+                      <Text style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                        Giảm {item.discountValue?.toLocaleString('vi-VN')}₫
+                      </Text>
+                      {item.minOrderValue > 0 && (
+                        <Text style={{ marginLeft: 8, color: 'var(--gray-500)', fontSize: 12 }}>
+                          (Đơn tối thiểu {item.minOrderValue.toLocaleString('vi-VN')}₫)
+                        </Text>
+                      )}
+                      {item.description && <div style={{ marginTop: 4, fontSize: 12, color: 'var(--gray-500)' }}>{item.description}</div>}
+                    </div>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

@@ -2,6 +2,7 @@ package com.example.orderservice.messaging;
 
 import com.example.orderservice.config.RabbitMqConfig;
 import com.example.shared.messaging.OrderCreatedEvent;
+import com.example.shared.messaging.OrderStatusEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -47,6 +48,19 @@ public class OrderEventPublisher {
 			log.info("Published order-created event for order {}", event.getOrderId());
 		} catch (Exception ex) {
 			log.error("Failed to publish order-created event for order {}", event.getOrderId(), ex);
+		}
+	}
+
+	public void publishOrderStatusEvent(OrderStatusEvent event) {
+		try {
+			rabbitTemplate.convertAndSend(
+					RabbitMqConfig.ORDER_EXCHANGE,
+					RabbitMqConfig.ORDER_STATUS_ROUTING_KEY,
+					event
+			);
+			log.info("Published order-status event for order {}: {}", event.getOrderId(), event.getStatus());
+		} catch (Exception ex) {
+			log.error("Failed to publish order-status event for order {}", event.getOrderId(), ex);
 		}
 	}
 }

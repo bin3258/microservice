@@ -16,6 +16,8 @@ import {
   MenuUnfoldOutlined,
   InboxOutlined,
   HomeOutlined,
+  TagOutlined,
+  StarOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../context/useAuth';
 
@@ -33,6 +35,8 @@ const allMenuItems = [
   { key: '/customers', icon: <UserOutlined />, label: 'Khách hàng' },
   { key: '/inventory', icon: <InboxOutlined />, label: 'Tồn kho' },
   { key: '/warehouses', icon: <HomeOutlined />, label: 'Kho hàng' },
+  { key: '/discounts', icon: <TagOutlined />, label: 'Mã giảm giá' },
+  { key: '/reviews', icon: <StarOutlined />, label: 'Đánh giá' },
 ];
 
 export default function AdminLayout() {

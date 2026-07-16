@@ -13,6 +13,8 @@ public class PaymentRequest {
 
     private String transactionId;
 
+    private String paymentMethod;
+
     public PaymentRequest() {}
 
     public Long getOrderId() { return orderId; }
@@ -21,4 +23,6 @@ public class PaymentRequest {
     public void setAmount(Double amount) { this.amount = amount; }
     public String getTransactionId() { return transactionId; }
     public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Form, Input, Button, Tabs, Typography, message, Card, Row, Col } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import api from '../api/axiosClient';
 
@@ -133,6 +133,11 @@ export default function LoginPage() {
                       style={{ borderRadius: 8 }}
                     />
                   </Form.Item>
+                  <div style={{ textAlign: 'right', marginTop: -16, marginBottom: 4 }}>
+                    <Link to="/forgot-password" style={{ fontSize: 13, color: 'var(--gray-500)' }}>
+                      Quên mật khẩu?
+                    </Link>
+                  </div>
                   <Button
                     type="primary"
                     htmlType="submit"

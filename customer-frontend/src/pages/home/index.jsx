@@ -57,8 +57,8 @@ export default function HomePage() {
       });
       message.success('Đã thêm vào giỏ hàng');
       refreshCartCount();
-    } catch {
-      message.error('Lỗi khi thêm vào giỏ hàng');
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Lỗi khi thêm vào giỏ hàng');
     }
   };
 

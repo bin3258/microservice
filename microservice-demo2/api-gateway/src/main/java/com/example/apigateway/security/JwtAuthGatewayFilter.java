@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
 
-    private static final String[] PUBLIC_PATHS = {"/api/auth", "/api/products", "/api/banners", "/api/categories", "/api/post-categories", "/api/posts", "/api/search", "/uploads", "/api/customers"};
+    private static final String[] PUBLIC_PATHS = {"/api/auth", "/api/products", "/api/banners", "/api/categories", "/api/post-categories", "/api/posts", "/api/search", "/uploads", "/api/customers", "/api/reviews/product"};
 
     private final SecretKey secretKey;
 
@@ -72,7 +72,11 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
 
     private boolean isPublicPath(String path) {
         if (path.equals("/api/auth/login") || path.equals("/api/auth/register")
-                || path.equals("/api/auth/refresh") || path.equals("/api/auth/validate")) {
+                || path.equals("/api/auth/refresh") || path.equals("/api/auth/validate")
+                || path.equals("/api/auth/forgot-password")
+                || path.equals("/api/auth/reset-password")
+                || path.startsWith("/api/payments/vnpay/return")
+                || path.startsWith("/api/payments/vnpay/ipn")) {
             return true;
         }
         for (String p : PUBLIC_PATHS) {

@@ -1,6 +1,6 @@
 import { Menu, Slider, Typography, Checkbox, Collapse, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import { RAM_OPTIONS, STORAGE_OPTIONS, BATTERY_OPTIONS, SCREEN_OPTIONS } from './filterUtils';
+import { RAM_OPTIONS, STORAGE_OPTIONS, BATTERY_OPTIONS, SCREEN_OPTIONS, COLOR_OPTIONS } from './filterUtils';
 
 const { Title, Text } = Typography;
 
@@ -11,6 +11,7 @@ export default function ShopSidebar({
   selectedStorage, onStorageChange,
   selectedBattery, onBatteryChange,
   selectedScreen, onScreenChange,
+  selectedColor, onColorChange,
   onReset,
 }) {
   const range = priceRange || [0, 100000000];
@@ -90,6 +91,19 @@ export default function ShopSidebar({
       children: (
         <Checkbox.Group value={selectedScreen} onChange={onScreenChange}>
           {SCREEN_OPTIONS.map((o) => (
+            <div key={o.value} style={{ marginBottom: 6 }}>
+              <Checkbox value={o.value}>{o.label}</Checkbox>
+            </div>
+          ))}
+        </Checkbox.Group>
+      ),
+    },
+    {
+      key: 'color',
+      label: 'Màu sắc',
+      children: (
+        <Checkbox.Group value={selectedColor} onChange={onColorChange}>
+          {COLOR_OPTIONS.map((o) => (
             <div key={o.value} style={{ marginBottom: 6 }}>
               <Checkbox value={o.value}>{o.label}</Checkbox>
             </div>

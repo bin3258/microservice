@@ -1,36 +1,46 @@
 package com.example.Auth_service.service;
 
-import com.example.Auth_service.dto.AuthResponse;
-import com.example.Auth_service.dto.LoginRequest;
-import com.example.Auth_service.dto.RefreshTokenRequest;
-import com.example.Auth_service.dto.RegisterRequest;
-import com.example.Auth_service.dto.ValidateResponse;
+import com.example.Auth_service.dto.*;
 import com.example.Auth_service.entity.AuthUser;
 import com.example.Auth_service.client.UserServiceClient;
+import com.example.Auth_service.client.NotificationServiceClient;
 import com.example.Auth_service.repository.AuthUserRepository;
 import com.example.Auth_service.security.JwtUtil;
 import io.jsonwebtoken.Claims;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final AuthUserRepository authUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
     private final UserServiceClient userServiceClient;
+    private final NotificationServiceClient notificationServiceClient;
+    private final ResetTokenService resetTokenService;
 
-    public AuthService(AuthUserRepository authUserRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, RefreshTokenService refreshTokenService, UserServiceClient userServiceClient) {
+    @Value("${jwt.reset-password-url}")
+    private String passwordResetBaseUrl;
+
+    public AuthService(AuthUserRepository authUserRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, RefreshTokenService refreshTokenService, UserServiceClient userServiceClient, NotificationServiceClient notificationServiceClient, ResetTokenService resetTokenService) {
         this.authUserRepository = authUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.refreshTokenService = refreshTokenService;
         this.userServiceClient = userServiceClient;
+        this.notificationServiceClient = notificationServiceClient;
+        this.resetTokenService = resetTokenService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -143,9 +153,12 @@ public class AuthService {
         }
     }
 
-    public void changePassword(Long userId, String newPassword) {
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
         AuthUser user = authUserRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Khong tim thay nguoi dung"));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng");
+        }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         authUserRepository.save(user);
     }
@@ -180,6 +193,42 @@ public class AuthService {
         }
         user.setRole(newRole);
         authUserRepository.save(user);
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+        log.info("Forgot password requested for email: {}", request.getEmail());
+        AuthUser user = authUserRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            log.warn("Email not found in database: {}", request.getEmail());
+            return;
+        }
+        String token = resetTokenService.createResetToken(user.getId());
+        String resetUrl = passwordResetBaseUrl + "?token=" + token;
+        log.info("Reset token created for user: {}", user.getUsername());
+        try {
+            notificationServiceClient.sendPasswordReset(Map.of(
+                "email", user.getEmail(),
+                "token", token,
+                "resetUrl", resetUrl,
+                "userName", user.getUsername()
+            ));
+            log.info("Password reset email sent to: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send password reset email: {}", e.getMessage());
+        }
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        Long userId = resetTokenService.validateAndGetUserId(request.getToken());
+        if (userId == null) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+        AuthUser user = authUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        authUserRepository.save(user);
+        resetTokenService.deleteResetToken(request.getToken());
+        log.info("Password reset successful for user: {}", user.getUsername());
     }
 
     public ValidateResponse validateToken(String token) {

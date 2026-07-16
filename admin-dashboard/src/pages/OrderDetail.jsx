@@ -6,7 +6,7 @@ import {
 } from 'antd';
 import {
   ArrowLeftOutlined, EnvironmentOutlined, FileTextOutlined, EditOutlined,
-  DeleteOutlined, PlusOutlined, MinusCircleOutlined
+  DeleteOutlined, PlusOutlined, MinusCircleOutlined, FilePdfOutlined
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orderAPI, productAPI } from '../api/axios';
@@ -136,6 +136,19 @@ export default function OrderDetail() {
   if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
   if (!order) return null;
 
+  const downloadInvoice = () => {
+    orderAPI.getInvoice(order.orderId)
+      .then(res => {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `HD-${order.orderId}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(() => message.error('Tải hoá đơn thất bại'));
+  };
+
   const imgSrc = (img) => {
     if (!img) return 'https://placehold.co/48x48';
     if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/')) return img;
@@ -183,6 +196,12 @@ export default function OrderDetail() {
         <Descriptions.Item label="Số lượng">{order.totalQuantity} sản phẩm</Descriptions.Item>
         <Descriptions.Item label="Tổng tiền"><Text strong>{formatPrice(order.totalPrice)}</Text></Descriptions.Item>
         <Descriptions.Item label="Phí ship">{order.shippingFee > 0 ? formatPrice(order.shippingFee) : <Text type="secondary">—</Text>}</Descriptions.Item>
+        {order.discountCode && (
+          <Descriptions.Item label="Mã giảm giá" span={3}>
+            <Tag color="green" style={{ textTransform: 'uppercase' }}>{order.discountCode}</Tag>
+            <Text style={{ color: '#52c41a', marginLeft: 8 }}>-{formatPrice(order.discountAmount)}</Text>
+          </Descriptions.Item>
+        )}
         <Descriptions.Item label="Trạng thái">
           <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
         </Descriptions.Item>
@@ -205,6 +224,7 @@ export default function OrderDetail() {
           onChange={handleStatusChange}
           options={STATUS_OPTIONS}
         />
+        <Button icon={<FilePdfOutlined />} onClick={downloadInvoice}>Xuất hoá đơn</Button>
       </Space>
 
       {order.status === 'PENDING' && (

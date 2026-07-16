@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc3545; color: #fff; padding: 15px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { padding: 20px; border: 1px solid #ddd; border-top: none; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: top; }
+        th { background: #f8f9fa; }
+        .product-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+        .spec { font-size: 12px; color: #666; margin-top: 4px; }
+        .total-row { font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
+        .badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 14px; }
+        .badge-danger { background: #dc3545; color: #fff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>Đơn hàng đã bị hủy</h2>
+    </div>
+    <div class="content">
+        <p>Xin chào <strong th:text="${userName}">User</strong>,</p>
+        <p>Đơn hàng của bạn đã bị hủy.</p>
+        <p><span class="badge badge-danger">ĐÃ HỦY</span></p>
+
+        <p><strong>Mã đơn hàng:</strong> #<span th:text="${orderId}">123</span></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Sản phẩm</th>
+                    <th>SL</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="item : ${items}">
+                    <td><img class="product-img" th:if="${item.productImg}" th:src="${item.productImg}" alt="" /></td>
+                    <td>
+                        <div th:text="${item.productName}">Sản phẩm</div>
+                        <div class="spec" th:if="${item.ram}">RAM: <span th:text="${item.ram}"></span></div>
+                        <div class="spec" th:if="${item.storage}">ROM: <span th:text="${item.storage}"></span></div>
+                        <div class="spec" th:if="${item.screenResolution}">Màn hình: <span th:text="${item.screenResolution}"></span></div>
+                        <div class="spec" th:if="${item.screenTechnology}">Công nghệ màn hình: <span th:text="${item.screenTechnology}"></span></div>
+                        <div class="spec" th:if="${item.battery}">Pin: <span th:text="${item.battery}"></span></div>
+                        <div class="spec" th:if="${item.color}">Màu sắc: <span th:text="${item.color}"></span></div>
+                    </td>
+                    <td th:text="${item.quantity}">1</td>
+                    <td th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')}">0</td>
+                    <td th:text="${#numbers.formatDecimal(item.lineTotal, 0, 'COMMA', 0, 'POINT')}">0</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p class="total-row" th:if="${discountCode != null and discountAmount != null and discountAmount > 0}">
+            Mã giảm giá: <strong th:text="${discountCode}"></strong>
+            <span style="display:block; color:#28a745;">Giảm giá: -<span th:text="${#numbers.formatDecimal(discountAmount, 0, 'COMMA', 0, 'POINT')}">0</span> VND</span>
+        </p>
+        <p class="total-row">Tổng tiền: <span th:text="${#numbers.formatDecimal(totalPrice, 0, 'COMMA', 0, 'POINT')}">0</span> VND</p>
+
+        <p>Nếu bạn có thắc mắc, vui lòng liên hệ với shop Binn để được hỗ trợ.</p>
+    </div>
+    <div class="footer">
+        <p>Email này được gửi tự động từ hệ thống shop Binn.</p>
+    </div>
+</div>
+</body>
+</html>

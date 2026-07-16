@@ -89,11 +89,23 @@ public class OrderController {
 		return ResponseEntity.ok(response);
 	}
 
+	@PutMapping("/{id}/confirm-payment")
+	public ResponseEntity<OrderResponse> confirmPayment(@PathVariable Long id) {
+		OrderResponse response = orderService.confirmPayment(id);
+		return ResponseEntity.ok(response);
+	}
+
 	@PutMapping("/{id}/cancel")
 	public ResponseEntity<Void> cancelOrder(HttpServletRequest request, @PathVariable Long id) {
 		Long currentUserId = getCurrentUserId(request);
 		orderService.cancelOrder(id, currentUserId);
 		return ResponseEntity.ok().build();
+	}
+
+	@GetMapping("/user/{userId}/has-purchased/{productId}")
+	public ResponseEntity<Map<String, Boolean>> hasPurchased(@PathVariable Long userId, @PathVariable Long productId) {
+		boolean purchased = orderService.hasPurchasedProduct(userId, productId);
+		return ResponseEntity.ok(Map.of("purchased", purchased));
 	}
 
 	@DeleteMapping("/{id}")

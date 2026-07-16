@@ -18,12 +18,15 @@ public class Order {
 	private Integer totalQuantity;
 	private Double totalPrice;
 	private String status = "PENDING";
+	private String paymentMethod;
 	private String shippingAddress;
 	private String note;
 	private Double shippingFee;
 	private String city;
 	private Double customerLat;
 	private Double customerLng;
+	private String discountCode;
+	private Double discountAmount;
 
 	private List<OrderItem> items = new ArrayList<>();
 
@@ -101,6 +104,9 @@ public class Order {
 		this.status = status;
 	}
 
+	public String getPaymentMethod() { return paymentMethod; }
+	public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
 	public String getShippingAddress() {
 		return shippingAddress;
 	}
@@ -125,6 +131,10 @@ public class Order {
 	public void setCustomerLat(Double customerLat) { this.customerLat = customerLat; }
 	public Double getCustomerLng() { return customerLng; }
 	public void setCustomerLng(Double customerLng) { this.customerLng = customerLng; }
+	public String getDiscountCode() { return discountCode; }
+	public void setDiscountCode(String discountCode) { this.discountCode = discountCode; }
+	public Double getDiscountAmount() { return discountAmount; }
+	public void setDiscountAmount(Double discountAmount) { this.discountAmount = discountAmount; }
 
 	public List<OrderItem> getItems() {
 		return items;

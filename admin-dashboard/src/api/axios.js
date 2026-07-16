@@ -61,6 +61,7 @@ export const orderAPI = {
   updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),
   update: (id, data) => api.put(`/orders/${id}`, data),
   delete: (id) => api.delete(`/orders/${id}`),
+  getInvoice: (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
 };
 
 export const postAPI = {
@@ -123,4 +124,19 @@ export const addressAPI = {
   update: (id, data) => api.put(`/addresses/${id}`, data),
   setDefault: (id, customerId) => api.put(`/addresses/${id}/default?customerId=${customerId}`),
   delete: (id) => api.delete(`/addresses/${id}`),
+};
+
+export const discountAPI = {
+  getAll: () => api.get('/discounts'),
+  getById: (id) => api.get(`/discounts/${id}`),
+  create: (data) => api.post('/discounts', data),
+  update: (id, data) => api.put(`/discounts/${id}`, data),
+  delete: (id) => api.delete(`/discounts/${id}`),
+  getUsers: (id) => api.get(`/discounts/${id}/users`),
+  setUsers: (id, userIds) => api.put(`/discounts/${id}/users`, userIds),
+};
+
+export const reviewAPI = {
+  getAll: () => api.get('/reviews/admin/all'),
+  reply: (id, data) => api.put(`/reviews/${id}/reply`, data),
 };
